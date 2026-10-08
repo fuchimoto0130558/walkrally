@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ウォークラリー(パイロット版)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #eef3f4;
+  --surface: #ffffff;
+  --ink: #12323b;
+  --muted: #5d747b;
+  --line: #cfdce0;
+  --brand: #0f4c5c;
+  --brand-ink: #ffffff;
+  --stamp: #c8283c;
+  --stamp-bg: #fdecee;
+  --ok: #1f7a4d;
+  --err: #b3261e;
+  --font: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1a1e; --surface: #162429; --ink: #e6f0f2; --muted: #93aab1;
+    --line: #2b3f46; --brand: #5fb4c9; --brand-ink: #0e1a1e;
+    --stamp: #ff6b7d; --stamp-bg: #3a1f25; --ok: #5fd09a; --err: #ff8a80;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1a1e; --surface: #162429; --ink: #e6f0f2; --muted: #93aab1;
+  --line: #2b3f46; --brand: #5fb4c9; --brand-ink: #0e1a1e;
+  --stamp: #ff6b7d; --stamp-bg: #3a1f25; --ok: #5fd09a; --err: #ff8a80;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font); line-height: 1.65; font-size: 16px;
+  -webkit-tap-highlight-color: transparent;
+}
+.wrap { max-width: 520px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 1.5rem; font-weight: 900; margin: 0 0 4px; letter-spacing: .02em; }
+.sub { color: var(--muted); margin: 0 0 20px; font-size: .95rem; }
+.badge { display: inline-block; font-size: .8rem; font-weight: 700; color: var(--brand); border: 1.5px solid var(--brand); border-radius: 999px; padding: 0 10px; margin-bottom: 8px; }
+
+button { font-family: inherit; font-size: 1rem; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.btn {
+  background: var(--brand); color: var(--brand-ink); border: 0; border-radius: 12px;
+  padding: 12px 20px; font-weight: 700; min-height: 48px;
+}
+.btn.ghost { background: transparent; color: var(--brand); border: 1.5px solid var(--brand); }
+.btn.block { width: 100%; }
+input[type=text] {
+  width: 100%; font-family: inherit; font-size: 1.1rem; padding: 12px 14px; min-height: 48px;
+  border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink);
+}
+
+/* progress */
+.progress { background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; padding: 14px 16px; margin-bottom: 18px; }
+.progress-top { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; }
+.progress-top .count { font-size: 1.6rem; font-weight: 900; }
+.bar { height: 10px; background: var(--line); border-radius: 999px; margin-top: 8px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--brand); border-radius: 999px; transition: width .4s ease; }
+
+/* stamp book */
+.book { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.slot {
+  background: var(--surface); border: 1.5px dashed var(--line); border-radius: 16px;
+  padding: 12px; text-align: center; min-height: 168px; display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between; color: inherit; width: 100%;
+}
+.slot.done { border-style: solid; border-color: var(--stamp); background: var(--stamp-bg); }
+.slot .no { font-size: .8rem; color: var(--muted); font-weight: 700; }
+.slot .name { font-weight: 700; font-size: .95rem; line-height: 1.35; }
+.ring {
+  width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center;
+  border: 2px dashed var(--line); color: var(--muted); font-size: 1.6rem; font-weight: 900;
+}
+.stamp {
+  width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center;
+  border: 4px double var(--stamp); color: var(--stamp); font-weight: 900; font-size: .8rem;
+  line-height: 1.2; text-align: center; transform: rotate(var(--rot, -8deg)); padding: 6px;
+}
+.stamp.fresh { animation: press .45s cubic-bezier(.2,1.4,.4,1); }
+@keyframes press { 0% { transform: rotate(var(--rot)) scale(2.2); opacity: 0; } 60% { opacity: 1; } 100% { transform: rotate(var(--rot)) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .stamp.fresh { animation: none; } .bar > i { transition: none; } }
+
+/* sheet */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: flex-end; justify-content: center; z-index: 10; }
+.overlay.open { display: flex; }
+.sheet {
+  background: var(--surface); width: 100%; max-width: 520px; border-radius: 20px 20px 0 0;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)); max-height: 90%; overflow-y: auto;
+}
+.sheet h2 { margin: 0 0 4px; font-size: 1.2rem; font-weight: 900; }
+.sheet .hint { background: var(--bg); border-radius: 12px; padding: 10px 12px; margin: 10px 0 14px; font-size: .95rem; }
+.msg { min-height: 1.6em; margin: 8px 0; font-weight: 700; }
+.msg.err { color: var(--err); }
+.msg.ok { color: var(--ok); }
+.row { display: flex; gap: 10px; margin-top: 8px; }
+.row .btn { flex: 1; }
+
+/* clear */
+.clear { text-align: center; background: var(--stamp-bg); border: 2px solid var(--stamp); border-radius: 16px; padding: 18px 16px; margin-bottom: 18px; display: none; }
+.clear.show { display: block; }
+.clear strong { display: block; font-size: 1.3rem; font-weight: 900; color: var(--stamp); }
+
+.foot { margin-top: 28px; text-align: center; color: var(--muted); font-size: .85rem; }
+.linkbtn { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 8px; min-height: 44px; }
+.hidden { display: none !important; }
+.note { font-size: .85rem; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== 開始画面 ===== -->
+  <section id="welcome">
+    <span class="badge">パイロット版</span>
+    <h1>ウォークラリー</h1>
+    <p class="sub">各ポイントに行って、スタンプを集めよう。</p>
+    <label for="nick" style="font-weight:700;display:block;margin-bottom:6px;">ニックネーム</label>
+    <input type="text" id="nick" maxlength="12" placeholder="例:さんぽ好き" autocomplete="off">
+    <p class="note">本名や連絡先は入力しないでください。この端末の中にだけ保存されます。スタンプの判定には現在地(位置情報)を使いますが、外部には送りません。</p>
+    <div style="margin-top:16px"><button class="btn block" id="startBtn">スタート</button></div>
+  </section>
+
+  <!-- ===== スタンプ帳 ===== -->
+  <section id="main" class="hidden">
+    <span class="badge">パイロット版</span>
+    <h1 id="greet">スタンプ帳</h1>
+    <p class="sub">ポイントをタップして、現在地を確認しよう。</p>
+
+    <div class="clear" id="clear">
+      <strong>コンプリート!</strong>
+      全部のスタンプを集めました。受付でこの画面を見せてください。
+    </div>
+
+    <div class="progress" aria-live="polite">
+      <div class="progress-top"><span>集めたスタンプ</span><span class="count" id="count">0 / 0</span></div>
+      <div class="bar"><i id="barFill"></i></div>
+    </div>
+
+    <div class="book" id="book"></div>
+
+    <div class="foot">
+      <button class="linkbtn" id="resetBtn">最初からやり直す</button>
+    </div>
+  </section>
+</div>
+
+<!-- ===== 合言葉入力シート ===== -->
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet">
+    <h2 id="sheetTitle"></h2>
+    <div class="hint" id="sheetHint"></div>
+    <div class="msg" id="msg" role="status"></div>
+    <div class="note" id="diag" style="word-break:break-all"></div>
+    <div class="row">
+      <button class="btn ghost" id="cancelBtn">閉じる</button>
+      <button class="btn" id="submitBtn">現在地を確認してスタンプを押す</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================
+   設定(ここを書き換えるとポイントを変更できます)
+   lat=緯度 / lng=経度 / radius=判定する半径(メートル)
+   ※ 座標はページのソースから見えます。
+   ===================================================== */
+const CONFIG = {
+  storageKey: "walkrally-pilot-v2",
+  timeoutSec: 40,
+  checkpoints: [
+    { name: "渕本さん家",   stamp: "渕本",   lat: 35.1214287, lng: 136.7522972, radius: 10  },
+    { name: "近鉄名古屋",   stamp: "近鉄",   lat: 35.1677405, lng: 136.8840922, radius: 100 },
+    { name: "萩原テクノ",   stamp: "萩原",   lat: 35.174528,  lng: 136.915562,  radius: 10  },
+    { name: "高岳駅",       stamp: "高岳",   lat: 35.174150,  lng: 136.915650,  radius: 10  }
+  ]
+};
+
+/* ---------- 状態の保存(失敗しても動く) ---------- */
+let state = { nick: "", stamps: {} };
+function load() {
+  try {
+    const raw = localStorage.getItem(CONFIG.storageKey);
+    if (raw) { const s = JSON.parse(raw); if (s && typeof s === "object") state = { nick: s.nick || "", stamps: s.stamps || {} }; }
+  } catch (e) { /* 保存できない環境でもそのまま動く */ }
+}
+function save() {
+  try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(state)); } catch (e) {}
+}
+
+/* ---------- 2点間の距離(メートル) ---------- */
+function distanceM(lat1, lng1, lat2, lng2) {
+  const R = 6371000, rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+  const h = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+const $ = id => document.getElementById(id);
+let currentIdx = null;
+let freshIdx = null;
+
+function render() {
+  const total = CONFIG.checkpoints.length;
+  const done = Object.keys(state.stamps).length;
+  $("greet").textContent = (state.nick || "あなた") + "さんのスタンプ帳";
+  $("count").textContent = done + " / " + total;
+  $("barFill").style.width = (done / total * 100) + "%";
+  $("clear").classList.toggle("show", done === total);
+
+  const book = $("book");
+  book.innerHTML = "";
+  CONFIG.checkpoints.forEach((cp, i) => {
+    const got = !!state.stamps[i];
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "slot" + (got ? " done" : "");
+    b.setAttribute("aria-label", cp.name + (got ? "(スタンプ済み)" : "(未取得)"));
+    const rot = [-9, 7, -4, 10][i % 4];
+    b.innerHTML =
+      '<span class="no">ポイント ' + (i + 1) + '</span>' +
+      (got
+        ? '<span class="stamp' + (freshIdx === i ? ' fresh' : '') + '" style="--rot:' + rot + 'deg">' + cp.stamp + '</span>'
+        : '<span class="ring">?</span>') +
+      '<span class="name">' + cp.name + '</span>';
+    b.addEventListener("click", () => openSheet(i));
+    book.appendChild(b);
+  });
+  freshIdx = null;
+}
+
+function show(which) {
+  $("welcome").classList.toggle("hidden", which !== "welcome");
+  $("main").classList.toggle("hidden", which !== "main");
+}
+
+function diagText(err) {
+  let framed = "不明";
+  try { framed = (window.top !== window.self) ? "はい" : "いいえ"; } catch (e) { framed = "はい"; }
+  const code = err ? "コード" + err.code + (err.message ? " / " + err.message : "") : "";
+  return "【診断】" + code + (code ? " / " : "") + "埋め込み表示: " + framed + " / 安全な接続: " + (window.isSecureContext ? "はい" : "いいえ");
+}
+let watchId = null, watchTimer = null;
+function stopWatch() {
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (watchTimer !== null) { clearTimeout(watchTimer); watchTimer = null; }
+  $("submitBtn").disabled = false;
+  $("submitBtn").textContent = "現在地を確認してスタンプを押す";
+}
+
+function openSheet(i) {
+  currentIdx = i;
+  const cp = CONFIG.checkpoints[i];
+  $("sheetTitle").textContent = cp.name;
+  $("sheetHint").textContent = "この場所から半径" + cp.radius + "m以内で、ボタンを押してください。";
+  setMsg("", "");
+  $("diag").textContent = "";
+  const got = !!state.stamps[i];
+  $("submitBtn").classList.toggle("hidden", got);
+  if (got) setMsg("このポイントはスタンプ済みです。", "ok");
+  $("overlay").classList.add("open");
+}
+function closeSheet() { stopWatch(); $("overlay").classList.remove("open"); currentIdx = null; }
+function setMsg(t, kind) { const m = $("msg"); m.textContent = t; m.className = "msg" + (kind ? " " + kind : ""); }
+
+function checkLocation() {
+  if (currentIdx === null) return;
+  const idx = currentIdx, cp = CONFIG.checkpoints[idx];
+  if (!("geolocation" in navigator)) { setMsg("この端末では位置情報を使えません。", "err"); return; }
+  stopWatch();
+  $("submitBtn").disabled = true;
+  $("submitBtn").textContent = "現在地を確認中…";
+  setMsg("現在地を取得しています。屋外で少しお待ちください。", "");
+
+  watchTimer = setTimeout(() => {
+    stopWatch();
+    setMsg("時間内に範囲に入れませんでした。ポイントに近づいて、もう一度押してください。", "err");
+  }, CONFIG.timeoutSec * 1000);
+
+  try {
+  watchId = navigator.geolocation.watchPosition(pos => {
+    if (currentIdx !== idx) return;
+    const d = distanceM(pos.coords.latitude, pos.coords.longitude, cp.lat, cp.lng);
+    const acc = Math.round(pos.coords.accuracy);
+    if (d <= cp.radius) {
+      stopWatch();
+      state.stamps[idx] = Date.now();
+      save();
+      freshIdx = idx;
+      closeSheet();
+      render();
+    } else {
+      setMsg("まだ範囲外です。あと約" + Math.max(1, Math.round(d - cp.radius)) + "m(現在地の誤差 約±" + acc + "m)", "err");
+    }
+  }, err => {
+    stopWatch();
+    $("diag").textContent = diagText(err);
+    if (err.code === 1 && /permissions policy/i.test(err.message || "")) {
+      setMsg("このページの表示方法では、位置情報が使えません。ページを単独のWebサイトとして公開した版で開いてください。", "err");
+    } else if (err.code === 1) {
+      setMsg("位置情報が許可されていません。ブラウザの設定で、このページの位置情報を「許可」にしてから、もう一度押してください。", "err");
+    } else if (err.code === 2) {
+      setMsg("現在地を取得できませんでした。屋外やGPSの電波が届く場所で試してください。", "err");
+    } else {
+      setMsg("現在地の取得に時間がかかっています。もう一度押してください。", "err");
+    }
+  }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+  } catch (e) {
+    stopWatch();
+    $("diag").textContent = diagText({ code: "例外", message: String(e && e.message || e) });
+    setMsg("このページでは位置情報を使えない状態です。", "err");
+  }
+}
+
+/* ---------- イベント ---------- */
+$("startBtn").addEventListener("click", () => {
+  const n = $("nick").value.trim();
+  if (!n) { $("nick").focus(); $("nick").placeholder = "ニックネームを入力してください"; return; }
+  state.nick = n.slice(0, 12);
+  save(); show("main"); render();
+});
+$("nick").addEventListener("keydown", e => { if (e.key === "Enter") $("startBtn").click(); });
+$("submitBtn").addEventListener("click", checkLocation);
+$("cancelBtn").addEventListener("click", closeSheet);
+$("overlay").addEventListener("click", e => { if (e.target === $("overlay")) closeSheet(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+$("resetBtn").addEventListener("click", () => {
+  if (confirm("スタンプをすべて消して最初からやり直しますか?")) {
+    state = { nick: "", stamps: {} };
+    save(); $("nick").value = ""; show("welcome");
+  }
+});
+
+/* ---------- 起動 ---------- */
+load();
+if (state.nick) { show("main"); render(); } else { show("welcome"); }
+</script>
+</body>
+</html>
